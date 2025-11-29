@@ -1,0 +1,262 @@
+version: "3"
+services:
+  # Основная база данных PostgreSQL
+  postgres_master:
+    image: postgres:13
+    container_name: postgres_master
+    restart: always
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./data:/var/lib/postgresql/data
+      - ./data-slave:/var/lib/postgresql/data-slave
+      - ./init-script:/etc/postgresql/init-script
+      - ./init-script/config/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./init-script/config/postgres.conf:/etc/postgresql/postgresql.conf
+      - ./init-script/init.sh:/docker-entrypoint-initdb.d/init.sh
+
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    command: ['postgres', '-c', 'wal_level=logical']
+    healthcheck:
+      test: ['CMD', 'psql', '-U', 'postgres', '-c', 'SELECT 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Реплика PostgreSQL
+  postgres_slave:
+    image: postgres:13
+    container_name: postgres_slave
+    restart: always
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./data-slave:/var/lib/postgresql/data
+      - ./init-script/config/pg_hba.conf:/etc/postgresql/pg_hba.conf
+      - ./init-script/config/postgres.conf:/etc/postgresql/postgresql.conf
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    depends_on:
+      postgres_master:
+        condition: service_healthy
+
+  # PostgreSQL DWH
+  postgres_dwh:
+    image: postgres:13
+    restart: always
+    container_name: postgres_dwh
+    hostname: postgres
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./init_dwh.sql:/docker-entrypoint-initdb.d/init_dwh.sql
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    command: ['postgres', '-c', 'wal_level=logical']
+    healthcheck:
+      test: ['CMD', 'psql', '-U', 'postgres', '-c', 'SELECT 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Zookeeper для Apache Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.3.1
+    hostname: zookeeper
+    container_name: zookeeper
+    ports:
+      - '2181:2181'
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: echo srvr | nc zookeeper 2181 || exit 1
+      start_period: 10s
+      retries: 20
+      interval: 10s
+
+  # Apache Kafka брокер
+  broker:
+    image: confluentinc/cp-kafka:7.3.1
+    hostname: broker
+    container_name: broker
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - '29092:29092'
+      - '9092:9092'
+      - '9101:9101'
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: 'zookeeper:2181'
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://broker:29092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_JMX_PORT: 9101
+      KAFKA_JMX_HOSTNAME: localhost
+    healthcheck:
+      test: nc -z localhost 9092 || exit -1
+      start_period: 15s
+      interval: 5s
+      timeout: 10s
+      retries: 10
+
+  # Debezium Backend для PostgreSQL
+  debezium:
+    image: quay.io/debezium/connect:latest
+    restart: always
+    container_name: debezium
+    hostname: debezium
+    depends_on:
+      postgres_master:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    ports:
+      - '8083:8083'
+    environment:
+      BOOTSTRAP_SERVERS: broker:29092
+      GROUP_ID: 1
+      CONFIG_STORAGE_TOPIC: connect_configs
+      STATUS_STORAGE_TOPIC: connect_statuses
+      OFFSET_STORAGE_TOPIC: connect_offsets
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      ENABLE_DEBEZIUM_SCRIPTING: 'true'
+      CONNECT_PLUGIN_PATH: /kafka/connect
+    volumes:
+      - ./debezium-connector-jdbc:/kafka/connect/plugins
+    healthcheck:
+      test:
+        [
+          'CMD',
+          'curl',
+          '--silent',
+          '--fail',
+          '-X',
+          'GET',
+          'http://localhost:8083/connectors',
+        ]
+      start_period: 10s
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Debezium UI для визуализации
+  debezium-ui:
+    image: quay.io/debezium/debezium-ui:2.1
+    restart: always
+    container_name: debezium-ui
+    hostname: debezium-ui
+    depends_on:
+      debezium:
+        condition: service_healthy
+    ports:
+      - '8080:8080'
+    environment:
+      KAFKA_CONNECT_URIS: http://debezium:8083
+
+  # Schema Registry для работы с Avro
+  schema-registry:
+    image: confluentinc/cp-schema-registry:7.3.1
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      broker:
+        condition: service_healthy
+    ports:
+      - '8081:8081'
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: broker:29092
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+    healthcheck:
+      start_period: 10s
+      interval: 10s
+      retries: 20
+      test: curl --user superUser:superUser --fail --silent --insecure http://localhost:8081/subjects --output /dev/null || exit 1
+
+  # Kafka REST Proxy для работы с REST API
+  rest-proxy:
+    image: confluentinc/cp-kafka-rest:7.3.1
+    depends_on:
+      broker:
+        condition: service_healthy
+    ports:
+      - '8082:8082'
+    hostname: rest-proxy
+    container_name: rest-proxy
+    environment:
+      KAFKA_REST_HOST_NAME: rest-proxy
+      KAFKA_REST_BOOTSTRAP_SERVERS: 'broker:29092'
+      KAFKA_REST_LISTENERS: 'http://0.0.0.0:8082'
+
+  # Debezium PostgreSQL Connector 
+  postgres_connector:
+    image: quay.io/debezium/connect:latest
+    container_name: postgres-connector
+    hostname: postgres-connector
+    depends_on:
+      broker:
+        condition: service_healthy
+      debezium:
+        condition: service_healthy
+    ports:
+      - "8084:8084"
+    environment:
+      BOOTSTRAP_SERVERS: broker:29092
+      GROUP_ID: postgres-connector-group
+      CONFIG_STORAGE_TOPIC: postgres_config
+      STATUS_STORAGE_TOPIC: postgres_status
+      OFFSET_STORAGE_TOPIC: postgres_offsets
+      KEY_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+      VALUE_CONVERTER: org.apache.kafka.connect.json.JsonConverter
+
+  clickhouse:
+    image: bitnami/clickhouse:latest
+    environment:
+      CLICKHOUSE_ADMIN_USER: 'clickhouse'
+      CLICKHOUSE_ADMIN_PASSWORD: 'clickhouse'
+    volumes:
+      - ./init_dwh.sql:/docker-entrypoint-startdb.d/init_dwh.sql
+      - ./init_dwh.sql:/docker-entrypoint-startdb.d/init_dwh_ch.sql
+      - ./init_clickhouse.sh:/docker-entrypoint-startdb.d/init_clickhouse.sh
+    ports:
+      - '8123:8123'
+      - '9000:9000'
+      - '9004:9004'
+      - '9005:9005'
+      - '9009:9009'
+
+  # DMP-сервис
+  dmp:
+    build:
+      context: .
+      dockerfile: Dockerfile.dmp
+    container_name: dmp
+    hostname: dmp
+    depends_on:
+      broker:
+        condition: service_healthy
+      postgres_dwh:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    command: python dmp.py
+    environment:
+      - KAFKA_BROKER=broker:9092
+      - DWH_CONNECTION_STRING=postgresql://username:password@postgres_dwh:5432/postgres
