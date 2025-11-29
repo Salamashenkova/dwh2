@@ -1,0 +1,15 @@
+FROM python:slim
+
+WORKDIR /app
+
+# Устанавливаем необходимые системные зависимости
+RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+
+# Устанавливаем зависимости Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["python", "dmp.py"]

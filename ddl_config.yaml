@@ -1,0 +1,188 @@
+tables:
+  bookings:
+    database: dwh_detailed
+    type: hub
+    fields:
+      - name: book_ref
+        type: String
+      - name: book_date
+        type: DateTime
+      - name: total_amount
+        type: Decimal(10, 2)
+    technical_fields:
+      - name: source_system_id
+        type: Int32
+      - name: created_at
+        type: DateTime DEFAULT now()
+      - name: version
+        type: Int32 DEFAULT 1
+    order_by: [book_ref]
+    engine: MergeTree()
+
+  airports:
+    database: dwh_detailed
+    type: hub
+    fields:
+      - name: airport_code
+        type: String
+      - name: airport_name
+        type: String
+      - name: city
+        type: String
+      - name: coordinates_lon
+        type: Float64
+      - name: coordinates_lat
+        type: Float64
+      - name: timezone
+        type: String
+    technical_fields:
+      - name: source_system_id
+        type: Int32
+      - name: created_at
+        type: DateTime DEFAULT now()
+      - name: version
+        type: Int32 DEFAULT 1
+    order_by: [airport_code]
+    engine: MergeTree()
+
+  aircrafts:
+    database: dwh_detailed
+    type: hub
+    fields:
+      - name: aircraft_code
+        type: String
+      - name: model
+        type: JSON
+      - name: range
+        type: Int32
+    technical_fields:
+      - name: source_system_id
+        type: Int32
+      - name: created_at
+        type: DateTime DEFAULT now()
+      - name: version
+        type: Int32 DEFAULT 1
+    order_by: [aircraft_code]
+    engine: MergeTree()
+
+  tickets:
+    database: dwh_detailed
+    type: hub
+    fields:
+      - name: ticket_no
+        type: String
+      - name: book_ref
+        type: String
+      - name: passenger_id
+        type: String
+      - name: passenger_name
+        type: String
+      - name: contact_data
+        type: JSON
+    technical_fields:
+      - name: source_system_id
+        type: Int32
+      - name: created_at
+        type: DateTime DEFAULT now()
+      - name: version
+        type: Int32 DEFAULT 1
+    order_by: [ticket_no]
+    engine: MergeTree()
+
+  flights:
+    database: dwh_detailed
+    type: hub
+    fields:
+      - name: flight_id
+        type: Int32
+      - name: flight_no
+        type: String
+      - name: scheduled_departure
+        type: DateTime
+      - name: scheduled_arrival
+        type: DateTime
+      - name: departure_airport
+        type: String
+      - name: arrival_airport
+        type: String
+      - name: status
+        type: String
+      - name: aircraft_code
+        type: String
+      - name: actual_departure
+        type: Nullable(DateTime)
+      - name: actual_arrival
+        type: Nullable(DateTime)
+    technical_fields:
+      - name: source_system_id
+        type: Int32
+      - name: created_at
+        type: DateTime DEFAULT now()
+      - name: version
+        type: Int32 DEFAULT 1
+    order_by: [flight_id]
+    engine: MergeTree()
+
+  ticket_flights:
+    database: dwh_detailed
+    type: link
+    fields:
+      - name: ticket_no
+        type: String
+      - name: flight_id
+        type: Int32
+      - name: fare_conditions
+        type: String
+      - name: amount
+        type: Decimal(10, 2)
+    technical_fields:
+      - name: source_system_id
+        type: Int32
+      - name: created_at
+        type: DateTime DEFAULT now()
+      - name: version
+        type: Int32 DEFAULT 1
+    order_by: [ticket_no, flight_id]
+    engine: MergeTree()
+
+  seats:
+    database: dwh_detailed
+    type: link
+    fields:
+      - name: aircraft_code
+        type: String
+      - name: seat_no
+        type: String
+      - name: fare_conditions
+        type: String
+    technical_fields:
+      - name: source_system_id
+        type: Int32
+      - name: created_at
+        type: DateTime DEFAULT now()
+      - name: version
+        type: Int32 DEFAULT 1
+    order_by: [aircraft_code, seat_no]
+    engine: MergeTree()
+
+  boarding_passes:
+    database: dwh_detailed
+    type: link
+    fields:
+      - name: ticket_no
+        type: String
+      - name: flight_id
+        type: Int32
+      - name: boarding_no
+        type: Int32
+      - name: seat_no
+        type: String
+    technical_fields:
+      - name: source_system_id
+        type: Int32
+      - name: created_at
+        type: DateTime DEFAULT now()
+      - name: version
+        type: Int32 DEFAULT 1
+    order_by: [ticket_no, flight_id]
+    engine: MergeTree()

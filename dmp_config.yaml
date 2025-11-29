@@ -1,0 +1,72 @@
+tables:
+  bookings:
+    schema: dwh_detailed
+    table: bookings
+    hub_key: book_ref
+    technical_fields:
+      - source_system_id
+      - created_at
+      - version
+
+  airports:
+    schema: dwh_detailed
+    table: airports
+    hub_key: airport_code
+    technical_fields:
+      - source_system_id
+      - created_at
+      - version
+
+  aircrafts:
+    schema: dwh_detailed
+    table: aircrafts
+    hub_key: aircraft_code
+    technical_fields:
+      - source_system_id
+      - created_at
+      - version
+
+  tickets:
+    schema: dwh_detailed
+    table: tickets
+    hub_key: ticket_no
+    technical_fields:
+      - source_system_id
+      - created_at
+      - version
+
+  flights:
+    schema: dwh_detailed
+    table: flights
+    hub_key: flight_id
+    technical_fields:
+      - source_system_id
+      - created_at
+      - version
+
+  ticket_flights:
+    schema: dwh_detailed
+    table: ticket_flights
+    hub_key: ticket_no
+    technical_fields:
+      - source_system_id
+      - created_at
+      - version
+
+  seats:
+    schema: dwh_detailed
+    table: seats
+    hub_key: aircraft_code
+    technical_fields:
+      - source_system_id
+      - created_at
+      - version
+
+  boarding_passes:
+    schema: dwh_detailed
+    table: boarding_passes
+    hub_key: ticket_no
+    technical_fields:
+      - source_system_id
+      - created_at
+      - version
