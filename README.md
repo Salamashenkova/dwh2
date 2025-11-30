@@ -50,6 +50,6 @@ docker exec -it postgres_dwh psql -U postgres -d dwh_main -c "SELECT * FROM dwh_
 
 ![alt text](photo_3.jpg)
 
-![alt text](photo_4.jpg)
+![alt text](photo_4.png)
 
-![alt text](photo_5.jpg)
+![alt text](photo_5.png)
