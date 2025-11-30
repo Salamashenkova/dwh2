@@ -41,6 +41,25 @@ docker exec -it postgres_dwh psql -U postgres -d dwh_main -c "\dt dwh_detailed.*
 ```
 docker exec -it postgres_dwh psql -U postgres -d dwh_main -c "SELECT * FROM dwh_detailed.hub_user;"
 ```
+Подкючение к debezium
+```
+curl -X POST -H "Content-Type: application/json" http://localhost:8083/connectors \
+  -d '{
+    "name": "user-connector",
+    "config": {
+      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+      "database.hostname": "postgres_master",
+      "database.port": "5432",
+      "database.user": "postgres",
+      "database.password": "postgres",
+      "database.dbname": "user_service_db",
+      "topic.prefix": "dbserver1",
+      "plugin.name": "pgoutput",
+      "publication.name": "user_publication",
+      "slot.name": "user_slot"
+    }
+  }'
+```
 
 ## Результаты:
 
@@ -53,3 +72,5 @@ docker exec -it postgres_dwh psql -U postgres -d dwh_main -c "SELECT * FROM dwh_
 ![alt text](photo_4.png)
 
 ![alt text](photo_5.png)
+<img width="1280" height="720" alt="image" src="https://github.com/user-attachments/assets/90989bf7-0640-4494-998b-1f829a365c2c" />
+
