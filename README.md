@@ -31,7 +31,7 @@ docker exec -it postgres_master psql -U postgres -d order_service_db -с "SELECT
 ```
 Вывод списка всех таблиц в DWH:
 ```
-docker exec -it postgres_dwh psql -U postgres -d dwh_main -c "\ dt dwh_detailed.*"
+docker exec -it postgres_dwh psql -U postgres -d dwh_main -c "\dt dwh_detailed.*"
 ```
 
 Пример вывода таблицы в DWH:
