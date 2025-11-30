@@ -1,16 +1,13 @@
 ## Авторы
-1. **Имайкин Егор Евгеньевич**, [im_egorrrr](https://t.me/im_egorrrr)
-2. **Лебедев Никита Александрович**, [nikit_lebedev](https://t.me/nikit_lebedev)
-3. **Труфанов Дмитрий Михайлович**, [dimi3_tru](https://t.me/dimi3_tru)
-4. **Смирнов Арсений Сергеевич**, [ars_kko](https://t.me/ars_kko)
+1. **Полина Кияшко**, [shinshiiila](https://t.me/shinshiiila)
+3. **Саламашенкова Дарья**, [salamashenkovadasha](https://t.me/salamashenkovadasha)
 
-Группа мФТиАД231
-
+ФТиАД
 ## Как запустить проект
 
 Клонирование проекта из этого репо:
 ```
-git clone https://github.com/DOMENTOR/DWH_hw02
+git clone https://github.com/Salamashenkova/dwh2
 ```
 Запуск инициализации БД:
 ```
