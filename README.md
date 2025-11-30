@@ -1,16 +1,14 @@
 ## Авторы
-1. **Имайкин Егор Евгеньевич**, [im_egorrrr](https://t.me/im_egorrrr)
-2. **Лебедев Никита Александрович**, [nikit_lebedev](https://t.me/nikit_lebedev)
-3. **Труфанов Дмитрий Михайлович**, [dimi3_tru](https://t.me/dimi3_tru)
-4. **Смирнов Арсений Сергеевич**, [ars_kko](https://t.me/ars_kko)
+1. **Полина Кияшко**, [shinshiiila](https://t.me/shinshiiila)
+3. **Саламашенкова Дарья**, [salamashenkovadasha](https://t.me/salamashenkovadasha)
 
-Группа мФТиАД231
+ФТиАД
 
 ## Как запустить проект
 
 Клонирование проекта из этого репо:
 ```
-git clone https://github.com/DOMENTOR/DWH_hw02
+git clone https://github.com/Salamashenkova/dwh2
 ```
 Запуск инициализации БД:
 ```
@@ -19,21 +17,32 @@ docker-compose up --build
 Параметры для подключения:
 Мастер
 ```
-psql -h 127.0.0.1 -p 5432 -U postgres -d postgres
+docker exec -it postgres_master psql -U postgres
 ```
-Слейв:
+DWH:
 ```
-psql -h 127.0.0.1 -p 5433 -U postgres -d postgres
+docker exec -it postgres_dwh psql -U postgres
+```
+Вывод таблиц для Мастер:
+```
+docker exec -it postgres_master psql -U postgres -d user_service_db -с "SELECT * FROM user_service_db.USERS;"
+
+docker exec -it postgres_master psql -U postgres -d order_service_db -с "SELECT * FROM order_service_db.ORDERS;" 
+```
+Вывод списка всех таблиц в DWH:
+```
+docker exec -it postgres_dwh psql -U postgres -d dwh_main -c "\ dt dwh_detailed.*"
+```
+
+Пример вывода таблицы в DWH:
+```
+docker exec -it postgres_dwh psql -U postgres -d dwh_main -c "SELECT * FROM dwh_detailed.hub_user;"
 ```
 
 ## Результаты:
 
-![alt text](image.png)
+![alt text](photo_1.jpg)
 
-![alt text](image-1.png)
+![alt text](photo_2.jpg)
 
-![alt text](image-2.png)
-
-![alt text](image-3.png)
-
-![alt text](image-4.png)
+![alt text](photo_3.jpg)
