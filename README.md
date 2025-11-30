@@ -12,7 +12,7 @@ git clone https://github.com/Salamashenkova/dwh2
 ```
 Запуск инициализации БД:
 ```
-docker-compose up --build
+docker-compose up -d
 ```
 Параметры для подключения:
 Мастер
@@ -60,7 +60,48 @@ curl -X POST -H "Content-Type: application/json" http://localhost:8083/connector
     }
   }'
 ```
-
+```
+curl -X POST -H "Content-Type: application/json" http://localhost:8083/connectors \
+  -d '{
+    "name": "order-connector",
+    "config": {
+      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+      "database.hostname": "postgres_master",
+      "database.port": "5432",
+      "database.user": "postgres",
+      "database.password": "postgres",
+      "database.dbname": "order_service_db",
+      "topic.prefix": "dbserver1",
+      "plugin.name": "pgoutput",
+      "publication.name": "order_publication",
+      "slot.name": "order_slot",
+      "table.include.list": "order_service_db.ORDERS,order_service_db.ORDER_ITEMS"
+    }
+  }'
+```
+```
+curl -X POST -H "Content-Type: application/json" http://localhost:8083/connectors \
+  -d '{
+    "name": "logistics-connector",
+    "config": {
+      "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+      "database.hostname": "postgres_master",
+      "database.port": "5432", 
+      "database.user": "postgres",
+      "database.password": "postgres",
+      "database.dbname": "logistics_service_db",
+      "topic.prefix": "dbserver1",
+      "plugin.name": "pgoutput",
+      "publication.name": "logistics_publication",
+      "slot.name": "logistics_slot",
+      "table.include.list": "logistics_service_db.WAREHOUSES,logistics_service_db.PICKUP_POINTS"
+    }
+  }'
+```
+Топики Kafka
+```
+ docker exec broker kafka-topics --bootstrap-server localhost:29092 --list
+```
 ## Результаты:
 
 ![alt text](photo_1.jpg)
@@ -73,4 +114,4 @@ curl -X POST -H "Content-Type: application/json" http://localhost:8083/connector
 
 ![alt text](photo_5.png)
 <img width="1280" height="720" alt="image" src="https://github.com/user-attachments/assets/90989bf7-0640-4494-998b-1f829a365c2c" />
-
+<img width="1920" height="1080" alt="Снимок экрана (270)" src="https://github.com/user-attachments/assets/fcd3ac0b-ad6d-4ea4-a43f-aa3803b7a3e7" />
