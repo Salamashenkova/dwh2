@@ -1,52 +1,72 @@
-import yaml
+import yaml  # ✅ ДОБАВЛЕНО!
+import json
 
 def generate_ddl(config_file, output_file):
-    # Читаем конфигурационный файл
+    # ✅ Читаем ddl_config.yaml (Data Vault 2.0 формат!)
     with open(config_file, 'r') as f:
         config = yaml.safe_load(f)
     
     ddl_statements = []
     
-    # Проходим по таблицам в конфиге
-    for table_name, table_config in config['tables'].items():
-        database = table_config.get('database', 'default')  # По умолчанию база данных - default
-        fields = table_config['fields']
-        technical_fields = table_config.get('technical_fields', [])
-        order_by = table_config.get('order_by', [])  # Поля для ORDER BY
-        engine = table_config.get('engine', 'MergeTree()')  # Движок таблицы
+    # ✅ ddl_config → HUB/SAT/LINK (НЕ tables!)
+    for table_name, table_config in config['ddl_config'].items():
+        table_type = table_config['type']
+        schema = table_config['schema']
+        business_key = table_config.get('business_key')
+        hash_key = table_config.get('hash_key', f'hk_{table_name}')
         
-        # Генерация CREATE TABLE
-        ddl = f"CREATE TABLE {database}.{table_name} (\n"
+        print(f"🔨 Generating {table_type}: {schema}.{table_name}")
         
-        # Добавляем обычные поля
-        field_definitions = []
-        for field in fields:
-            field_definition = f"  {field['name']} {field['type']}"
-            field_definitions.append(field_definition)
+        # 🎯 Data Vault 2.0 поля по типу
+        if table_type == 'hub':
+            fields = [
+                f"{hash_key} BYTEA PRIMARY KEY",
+                f"{business_key} VARCHAR NOT NULL",
+                "load_dts TIMESTAMP DEFAULT NOW()",
+                "rec_src VARCHAR DEFAULT 'source'"
+            ]
+            indexes = [f"CREATE INDEX idx_{table_name}_bk ON {schema}.{table_name}({business_key});"]
+            
+        elif table_type == 'sat':
+            fields = [
+                f"{hash_key[:-4]} BYTEA NOT NULL REFERENCES {schema}.{table_name[:-4]}({hash_key[:-4]})",
+                "load_dts TIMESTAMP NOT NULL",
+                "rec_src VARCHAR DEFAULT 'source'",
+                "hashdiff BYTEA NOT NULL"
+            ]
+            # ✅ Атрибуты из config
+            if 'attributes' in table_config:
+                for attr in table_config['attributes'][:5]:  # Первые 5
+                    fields.append(f"{attr} VARCHAR")
+            fields.append("PRIMARY KEY ({hash_key[:-4]}, load_dts)")
+            indexes = [f"CREATE INDEX idx_{table_name}_hashdiff ON {schema}.{table_name}(hashdiff);"]
+            
+        elif table_type == 'link':
+            fields = [
+                f"{hash_key} BYTEA PRIMARY KEY",
+                f"{table_config['parent_keys'][0]['key']} BYTEA NOT NULL REFERENCES {schema}.{table_config['parent_keys'][0]['hub']}({table_config['parent_keys'][0]['key']})",
+                f"{table_config['parent_keys'][1]['key']} BYTEA NOT NULL REFERENCES {schema}.{table_config['parent_keys'][1]['hub']}({table_config['parent_keys'][1]['key']})",
+                "load_dts TIMESTAMP DEFAULT NOW()",
+                "rec_src VARCHAR DEFAULT 'source'"
+            ]
+            indexes = [
+                f"CREATE INDEX idx_{table_name}_hk1 ON {schema}.{table_name}({table_config['parent_keys'][0]['key']});",
+                f"CREATE INDEX idx_{table_name}_hk2 ON {schema}.{table_name}({table_config['parent_keys'][1]['key']});"
+            ]
         
-        # Добавляем технические поля
-        for tech_field in technical_fields:
-            tech_definition = f"  {tech_field['name']} {tech_field['type']}"
-            field_definitions.append(tech_definition)
-        
-        # Собираем все поля
-        ddl += ",\n".join(field_definitions)
-        ddl += "\n)"
-        
-        # Добавляем ENGINE и ORDER BY
-        if order_by:
-            ddl += f" ENGINE = {engine}\nORDER BY ({', '.join(order_by)});"
-        else:
-            ddl += f" ENGINE = {engine};"
-        
+        # ✅ CREATE TABLE
+        ddl = f"CREATE TABLE IF NOT EXISTS {schema}.{table_name} (\n  " + ",\n  ".join(fields) + "\n);"
         ddl_statements.append(ddl)
+        
+        # ✅ INDEXES
+        ddl_statements.extend(indexes)
     
-    # Записываем все DDL в файл
+    # ✅ Запись в файл
     with open(output_file, 'w') as f:
-        f.write("\n".join(ddl_statements))
+        f.write("-- Data Vault 2.0 DDL (generated from ddl_config.yaml)\n")
+        f.write("\n\n".join(ddl_statements))
     
-    print(f"DDL успешно сгенерирован в файл: {output_file}")
+    print(f"✅ DDL сгенерирован: {output_file}")
 
-# Запускаем генератор
 if __name__ == '__main__':
-    generate_ddl('ddl_config.yaml', 'generated_ddl.sql')
+    generate_ddl('ddl_config.yaml', 'ddl_generated.sql')

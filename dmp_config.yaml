@@ -1,72 +1,13 @@
-tables:
-  bookings:
-    schema: dwh_detailed
-    table: bookings
-    hub_key: book_ref
-    technical_fields:
-      - source_system_id
-      - created_at
-      - version
+FROM python:3.11-slim
 
-  airports:
-    schema: dwh_detailed
-    table: airports
-    hub_key: airport_code
-    technical_fields:
-      - source_system_id
-      - created_at
-      - version
+RUN apt-get update && apt-get install -y \
+    librdkafka-dev \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-  aircrafts:
-    schema: dwh_detailed
-    table: aircrafts
-    hub_key: aircraft_code
-    technical_fields:
-      - source_system_id
-      - created_at
-      - version
+RUN pip install confluent-kafka pandas sqlalchemy psycopg2-binary pyyaml
 
-  tickets:
-    schema: dwh_detailed
-    table: tickets
-    hub_key: ticket_no
-    technical_fields:
-      - source_system_id
-      - created_at
-      - version
+COPY dmp_processor.py .
+COPY ddl_config.yaml .
 
-  flights:
-    schema: dwh_detailed
-    table: flights
-    hub_key: flight_id
-    technical_fields:
-      - source_system_id
-      - created_at
-      - version
-
-  ticket_flights:
-    schema: dwh_detailed
-    table: ticket_flights
-    hub_key: ticket_no
-    technical_fields:
-      - source_system_id
-      - created_at
-      - version
-
-  seats:
-    schema: dwh_detailed
-    table: seats
-    hub_key: aircraft_code
-    technical_fields:
-      - source_system_id
-      - created_at
-      - version
-
-  boarding_passes:
-    schema: dwh_detailed
-    table: boarding_passes
-    hub_key: ticket_no
-    technical_fields:
-      - source_system_id
-      - created_at
-      - version
+CMD ["python", "dmp_processor.py"]

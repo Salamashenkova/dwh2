@@ -1,15 +1,23 @@
-FROM python:slim
+FROM python:3.11-slim
+
+# Устанавливаем системные зависимости
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Обновляем pip
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel
 
 WORKDIR /app
 
-# Устанавливаем необходимые системные зависимости
-RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
-
+# Копируем только requirements для кэширования слоев
 COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt || \
+    pip install --no-cache-dir --force-reinstall -r requirements.txt
 
-# Устанавливаем зависимости Python
-RUN pip install --no-cache-dir -r requirements.txt
-
+# Копируем код
 COPY . .
 
 CMD ["python", "dmp.py"]
