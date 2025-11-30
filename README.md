@@ -23,11 +23,14 @@ DWH:
 ```
 docker exec -it postgres_dwh psql -U postgres
 ```
-Вывод таблиц для Мастер:
+Примеры вывода таблиц для Мастер:
 ```
-docker exec -it postgres_master psql -U postgres -d user_service_db -с "SELECT * FROM user_service_db.USERS;"
+docker exec -it postgres_master psql -U postgres -d user_service_db -c "SELECT * FROM user_service_db.USERS LIMIT 3;"
 
-docker exec -it postgres_master psql -U postgres -d order_service_db -с "SELECT * FROM order_service_db.ORDERS;" 
+docker exec -it postgres_master psql -U postgres -d order_service_db -c "SELECT * FROM order_service_db.ORDERS LIMIT 3;"
+
+docker exec -it postgres_master psql -U postgres -d logistics_service_db -c "SELECT * FROM logistics_service_db.warehouses LIMIT 5;"
+ 
 ```
 Вывод списка всех таблиц в DWH:
 ```
@@ -46,3 +49,7 @@ docker exec -it postgres_dwh psql -U postgres -d dwh_main -c "SELECT * FROM dwh_
 ![alt text](photo_2.jpg)
 
 ![alt text](photo_3.jpg)
+
+![alt text](photo_4.jpg)
+
+![alt text](photo_5.jpg)
